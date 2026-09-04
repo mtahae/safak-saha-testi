@@ -312,6 +312,18 @@ def main():
         log("(devralma senaryosu: 1-3. bolumler bilgi amaclidir, "
             "gecme sarti 5. bolumdur)")
 
+    # SAHA TESTI BAYRAKLARI degerlendirmeyi de degistirir. Bunlar verildiginde
+    # "servo acilmadi" ya da "kirmizi hedefe gidilmedi" BEKLENEN sonuctur;
+    # hata olarak raporlamak yanlis alarm uretir ve gercek bir hatayi
+    # gormemize engel olur.
+    servo_beklenir = not args.temsili_servo
+    kirmizi_beklenir = not args.sadece_mavi
+    if args.temsili_servo:
+        log("(temsili servo: 2. bolum bilgi amaclidir -- servo zaten "
+            "tetiklenmiyor)")
+    if args.sadece_mavi:
+        log("(sadece mavi: kirmizi hedef icin birakma beklenmiyor)")
+
     log("\n1) HEDEF KONUM DOGRULUGU")
     for sinif, k, d, kenar in HEDEFLER:
         g_lat, g_lon = _oteleme(EV_LAT, EV_LON, k, d)
@@ -333,14 +345,22 @@ def main():
                 cfg.SERVO_KANAL_KIRMIZI_YUK: ("mavi_hedef", "2x2 MAVI hedefe KIRMIZI yuk")}
     acilanlar = [r for r in sim.servo_kayit if r["pwm"] == cfg.SERVO_ACIK_PWM]
     for kanal, (sinif, aciklama) in beklenen.items():
+        # Bu kanal icin servo BEKLENIYOR mu? --temsili-servo hicbirini,
+        # --sadece-mavi ise kirmiziyi beklemez.
+        bu_beklenir = (normal and servo_beklenir
+                       and (kirmizi_beklenir or sinif == "mavi_hedef"))
         var = any(r["kanal"] == kanal for r in acilanlar)
-        if normal:
+        if bu_beklenir:
             gecti &= var
-        log(f"   [{'OK ' if var else ('HATA' if normal else 'bilgi')}] "
+        log(f"   [{'OK ' if var else ('HATA' if bu_beklenir else 'bilgi')}] "
             f"kanal {kanal}: {aciklama}")
-    if len(acilanlar) != 2:
+    hedef_sayi = 2 if kirmizi_beklenir else 1
+    if not servo_beklenir:
+        log(f"   [bilgi] {len(acilanlar)} servo acildi -- temsili servo "
+            f"modunda 0 beklenir")
+    elif len(acilanlar) != hedef_sayi:
         log(f"   [{'HATA' if normal else 'bilgi'}] {len(acilanlar)} servo "
-            f"acildi, normal gorevde 2 beklenir")
+            f"acildi, bu kosumda {hedef_sayi} beklenir")
         if normal:
             gecti = False
 
@@ -356,7 +376,8 @@ def main():
         g_lat, g_lon = _oteleme(EV_LAT, EV_LON, h[1], h[2])
         isabet = geo.mesafe_m(kayit["lat"], kayit["lon"], g_lat, g_lon)
         ok = isabet < 10.0
-        gecti &= ok
+        if normal:
+            gecti &= ok
         log(f"   [{'OK ' if ok else 'HATA'}] {sinif:14s} isabet={isabet:5.2f} m "
             f"(birakma irtifasi {kayit['alt']:.1f} m)")
 
