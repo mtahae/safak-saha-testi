@@ -247,7 +247,34 @@ class Arayuz:
 
         self._app = app
         threading.Thread(target=self._kos, daemon=True).start()
-        self.g.log(f"[ui] arayuz hazir -> http://<raspi-ip>:{self.port}")
+        ip = self._yerel_ip()
+        self.g.log("=" * 62)
+        self.g.log(f"[ui] ARAYUZ HAZIR   ->   http://{ip}:{self.port}")
+        self.g.log(f"[ui] bu adresi KENDI BILGISAYARINDAKI tarayiciya yaz")
+        self.g.log(f"[ui] (Pi'nin kendi ekranindan: http://localhost:{self.port})")
+        self.g.log("=" * 62)
+
+    @staticmethod
+    def _yerel_ip():
+        """Bu makinenin LAN adresi.
+
+        Disari bir UDP soketi 'baglar' ama paket gondermez; cekirdek yonlendirme
+        tablosuna bakip hangi arayuzu kullanacagini soyler ve yerel adresi
+        ondan ogreniriz. `hostname -I`'dan farki: birden fazla arayuz varsa
+        (eth0 + wlan0 + docker0) dogru olani secer.
+        """
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 1))
+            return s.getsockname()[0]
+        except Exception:
+            try:
+                return socket.gethostbyname(socket.gethostname())
+            except Exception:
+                return "127.0.0.1"
+        finally:
+            s.close()
 
     def _kos(self):
         try:
