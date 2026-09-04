@@ -1,8 +1,7 @@
 {
-  "detection_threshold": 0.35,
+  "detection_threshold": 0.25,
   "max_boxes": 20,
   "labels": [
-    "unlabeled",
     "kirmizi_hedef",
     "mavi_hedef"
   ]

@@ -257,9 +257,17 @@ PT_MODEL = PROJE_KOK / "models" / "safak_yolov8n.pt"
 # KULLANILMAZ; otomatik seçim NCNN'de kalır. Sebep: Hailo yolu kamerayı
 # GStreamer boru hattına devrediyor ve bu, sahada doğrulanana kadar test
 # edilmiş NCNN yolundan daha riskli.
-HAILO_HEF = PROJE_KOK / "models" / "safak_yolov8n.hef"
+HAILO_HEF = PROJE_KOK / "models" / "safak_v2.hef"
 # ETİKET DOSYASI ZORUNLU. Verilmezse Hailo COCO'nun 80 sınıfını kullanır ve
 # model "person"/"bicycle" döndürür (bu proje bunu bir kez yaşadı).
+#
+# Listede "unlabeled" dolgusu YOK ve olmamalı. Derleme çıktısındaki
+# nms_config.json şunu söylüyor:
+#     "classes": 2,  "background_removal": false
+# background_removal false ise arka plan sınıfı YOKTUR; indeks 0 doğrudan
+# kirmizi_hedef'tir. Başa "unlabeled" koymak sınıfları bir kaydırır:
+# kırmızı "unlabeled" (elenir), mavi "kirmizi_hedef" olur ve renk
+# doğrulamasında elenir -> SIFIR TESPİT. Hata vermez, sadece hiçbir şey bulmaz.
 HAILO_ETIKET_JSON = PROJE_KOK / "models" / "safak_etiketler.json"
 # GStreamer kaynağı: "rpi" (CSI kamera), "usb", /dev/videoN ya da video dosyası
 HAILO_KAYNAK = "rpi"

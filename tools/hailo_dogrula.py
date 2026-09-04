@@ -122,9 +122,13 @@ def main():
         print("  Kontrol edin: models/safak_etiketler.json okunuyor mu?")
         print("  Etiket sirasi su an: " + str(_etiketleri_oku(
             args.etiket or cfg.HAILO_ETIKET_JSON)))
-        print("  Sinif KAYMASI ihtimali: listedeki 'unlabeled' dolgusunu")
-        print("  KALDIRIP tekrar deneyin (bu dolgu bazi surumlerde gerekli,")
-        print("  bazilarinda fazladir; ikisi de sessizce yanlis sonuc verir).")
+        print()
+        print("  BEKLENEN liste: ['kirmizi_hedef', 'mavi_hedef'] -- basta")
+        print("  'unlabeled' dolgusu OLMAMALI. Derleme ciktisindaki")
+        print("  nms_config.json 'background_removal: false' diyor, yani arka")
+        print("  plan sinifi yok ve indeks 0 dogrudan kirmizi_hedef.")
+        print("  Basta dolgu VARSA siniflar bir kayar: kirmizi 'unlabeled',")
+        print("  mavi 'kirmizi_hedef' olur -> ikisi de elenir -> SIFIR TESPIT.")
         kaldi.append("bilinmeyen etiket geldi (labels-json)")
     elif not gorulen:
         kaldi.append("hic tespit alinmadi -- branda gosterildi mi?")
@@ -133,6 +137,12 @@ def main():
         yol = CIKTI / "tespit_ornegi.jpg"
         cv2.imwrite(str(yol), ornek)
         print(f"\n  ornek tespit karesi -> {yol}")
+        print("  >> BU KAREYE GOZLE BAKIN: kutu gercekten brandanin UZERINDE mi?")
+        print("     Sonra brandayi kadrajin KENARINA getirip tekrar bakin.")
+        print("     Kutu merkeze dogru KAYIYORSA boru hatti letterbox (gri bant)")
+        print("     ekliyor ve kutu koordinatlari o bantlari da kapsiyor demektir;")
+        print("     o zaman tum tespitler sistematik olarak merkeze cekilir ve")
+        print("     geolokasyon hedefi oldugundan daha yakin gosterir.")
 
     # ---------------------------------------------------------------- 3
     basli("3) KIRPMA / GORUS ACISI")

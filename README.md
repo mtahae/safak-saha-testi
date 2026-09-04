@@ -190,6 +190,25 @@ python tools/kamera_kalibrasyon.py --kaynak picam --montaj
 
 ---
 
+## 5b. Hailo ile çalışacaksan — doğrulama (ZORUNLU)
+
+HEF depoda hazır: `models/safak_v2.hef` (safak_v2 modelinden, 640×640, NMS
+gömülü, hailo8l). Etiket dosyası derleme çıktısıyla doğrulandı.
+
+```bash
+sudo apt install hailo-all      # kurulu değilse
+hailortcli fw-control identify  # AI HAT+ görünüyor mu
+python tools/hailo_dogrula.py
+```
+
+Dört şeyi ölçer: boru hattı kare üretiyor mu, etiketler doğru mu, **kırpma
+veya letterbox var mı**, FPS ne. Ayrıntı ve gerekçeler: [HAILO.md](HAILO.md).
+
+**Geçmeden `--motor hailo` ile uçma.** Geçemezse NCNN ile uç — görev mantığı
+aynı, sadece çıkarım CPU'da olur.
+
+---
+
 ## 6. Tezgâh testi — **PERVANELER SÖKÜK**
 
 ```bash
@@ -214,6 +233,11 @@ Tek test koşmak için: `--test 3`
 python -m src.gorev.gorev2 --kaynak picam --sadece-mavi --temsili-servo --ui --prova
 ```
 
+Hailo ile (doğrulama geçtiyse — `--kaynak` verilmez, kamerayı boru hattı açar):
+```bash
+python -m src.gorev.gorev2 --motor hailo --sadece-mavi --temsili-servo --ui --prova
+```
+
 `--prova` uçuş komutu da göndermez. Mavi brandayı kameranın önünde gezdir.
 
 Beklenen:
@@ -226,7 +250,11 @@ Beklenen:
 ## 8. Canlı uçuş
 
 ```bash
+# NCNN (CPU) ile
 python -m src.gorev.gorev2 --kaynak picam --sadece-mavi --temsili-servo --ui
+
+# Hailo NPU ile
+python -m src.gorev.gorev2 --motor hailo --sadece-mavi --temsili-servo --ui
 ```
 
 `--prova` **yok** — yani araç gerçekten GUIDED'a geçip hedefin üstüne inecek.
@@ -291,8 +319,10 @@ koordinatlı rapor.
 
 ## Hailo (AI HAT+) kullanacaksan
 
-Uçuş yolu **NCNN**. Hailo asla otomatik seçilmiyor. Kullanmak istersen önce
-[HAILO.md](HAILO.md) oku ve `tools/hailo_dogrula.py`'yi geçir.
+HEF depoda hazır (`models/safak_v2.hef`). Hailo asla **otomatik** seçilmiyor;
+`--motor hailo` ile açıkça istenir ve o modda kamerayı da boru hattı açar
+(`--kaynak` verilmez). Önce `tools/hailo_dogrula.py`'yi geçir.
+Ayrıntı: [HAILO.md](HAILO.md).
 
 ---
 

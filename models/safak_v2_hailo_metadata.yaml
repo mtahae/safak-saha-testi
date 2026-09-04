@@ -1,0 +1,29 @@
+description: Ultralytics safak_v2 model trained on C:\Users\tahaee\Desktop\safakuav\dataset\data.yaml
+author: Ultralytics
+date: '2026-09-01T16:41:22.301096+00:00'
+version: 8.4.137
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+head: Detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: kirmizi_hedef
+  1: mavi_hedef
+args:
+  data: coco128.yaml
+  name: hailo8l
+  fraction: 1.0
+  conf: 0.25
+  iou: 0.7
+  quantize: 8
+  simplify: true
+channels: 3
+end2end: false
+hailo_arch: hailo8l
+nms: true
+semantic_baked: false

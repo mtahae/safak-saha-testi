@@ -1,21 +1,62 @@
 # Hailo-8L (AI HAT+) Entegrasyonu
 
-## Önce açık konuşalım: `.hef` dosyasını ben üretemem
+## HEF hazır — depoda
 
-HEF derlemesi **Hailo Dataflow Compiler** ile yapılır. Bu araç:
+`models/safak_v2.hef` (9,4 MB). **safak_v2 modelinden** derlenmiş.
+Yanındaki iki dosya derleme ayarlarının kanıtı:
 
-- yalnızca **x86_64 Linux**'ta çalışır (Raspberry Pi'de değil, Windows'ta değil),
-- Hailo Developer Zone hesabı ister,
-- Docker imajı olarak dağıtılır.
+`models/safak_v2_hailo_metadata.yaml`:
+```yaml
+names:  {0: kirmizi_hedef, 1: mavi_hedef}
+imgsz:  [640, 640]
+nms:    true
+hailo_arch: hailo8l
+end2end: false
+```
 
-Yani HEF'i ya hocanızın kullandığı **Ultralytics dışa aktarma** yolundan, ya da
-x86 bir Linux makinede DFC kurarak alırsınız. Aşağıda ikisi de var.
+`models/safak_v2_nms_config.json`:
+```json
+{ "classes": 2, "background_removal": false,
+  "nms_scores_th": 0.25, "nms_iou_th": 0.7, "image_dims": [640, 640] }
+```
 
-**Şu an elinizdeki HEF `safak_yolov8n.onnx`'ten derlendi — yani v1 modeli.**
-Yeni domainde recall'u %12,5 olan model o. Final model eğitilince yeniden
-derlenmesi gerekiyor.
+Bunlar iki soruyu kesin olarak cevaplıyor:
 
----
+**1. Etiket sırası.** `background_removal: false` → arka plan sınıfı **yok**,
+indeks 0 doğrudan `kirmizi_hedef`. Bu yüzden `models/safak_etiketler.json`
+başına `"unlabeled"` dolgusu **konulmaz**:
+
+```json
+{ "detection_threshold": 0.25, "max_boxes": 20,
+  "labels": ["kirmizi_hedef", "mavi_hedef"] }
+```
+
+Dolgu konulsaydı sınıflar bir kayardı: kırmızı `"unlabeled"` (tanınmaz, elenir),
+mavi `"kirmizi_hedef"` (renk doğrulaması eler, çünkü mavi kutuda kırmızı yok).
+**Sonuç sıfır tespit olurdu — hata vermeden.** Bu tuzağı tahminle değil derleme
+çıktısıyla kapattık.
+
+**2. NMS.** `nms: true` → bastırma HEF'in içinde. `detect_hailo.py` zaten
+NMS'lenmiş tespit bekliyor, uyumlu.
+
+## `.hef` yeniden nasıl üretilir
+
+Yeni bir model eğitildiğinde gerekir. HEF derlemesi **Hailo Dataflow
+Compiler** ile yapılır: yalnızca x86_64 Linux'ta çalışır, Hailo hesabı ister,
+Docker imajı olarak dağıtılır — Raspberry Pi'de veya Windows'ta üretilemez.
+
+**Yol A — Ultralytics (bu HEF böyle üretildi):** modeli platforma yükleyip
+Hailo hedefine aktarın. Kullanılan ayarlar: `imgsz=640, simplify=true,
+conf=0.25, iou=0.7, name=hailo8l`. `hailo8l` önemli — AI HAT+'taki yonga
+Hailo-8**L**.
+
+**Yol B — Yerel DFC (x86 Linux):**
+```bash
+python tools/export_model.py --format onnx --model models/safak_v2.pt
+hailomz compile yolov8n --ckpt safak_v2.onnx --hw-arch hailo8l         --classes 2 --calib-path <kendi_goruntulerimiz/>
+```
+Kalibrasyon görüntüleri **kendi veri setimizden** olmalı; COCO'yla kalibre
+edilirse nicemleme brandalarımızın renk dağılımına göre ayarlanmaz.
 
 ## Uçuş yolu NCNN, Hailo opsiyonel
 
@@ -29,76 +70,22 @@ JPEG kodlama, MAVLink ve arayüz de çalıştırıyor. Ama kazancın büyüklü�
 ölçmeden bilemeyiz — `hailo_dogrula.py` FPS'i söyleyecek, NCNN'inkiyle
 karşılaştırıp karar veririz. Kazanç küçükse riske girmeye değmez.
 
----
-
-## Yeni HEF nasıl üretilir
-
-### Yol A — Ultralytics (hocanızın kullandığı, en kolay)
-
-Ultralytics platformunda modeli yükleyip **Hailo** hedefine dışa aktarın.
-Hocanızın ayarları ekran görüntüsünde şöyleydi:
-
-```
-imgsz=640, simplify=true, conf=0.25, iou=0.7, name=hailo8l
-```
-
-`name=hailo8l` önemli — AI HAT+ üzerindeki yonga Hailo-**8L**, Hailo-8 değil.
-Yanlış hedef için derlenen HEF yüklenmez.
-
-Yeni modeli (`safak_v2.pt` ya da final model) aynı ayarlarla aktarın.
-
-### Yol B — Yerel Dataflow Compiler (x86 Linux gerekir)
-
-```bash
-# 1) PC'de ONNX'e aktar
-python tools/export_model.py --format onnx --model models/safak_v2.pt
-
-# 2) x86 Linux'ta, Hailo DFC Docker imajı içinde
-hailomz compile yolov8n \
-    --ckpt safak_v2.onnx \
-    --hw-arch hailo8l \
-    --calib-path <kalibrasyon_goruntuleri_klasoru/> \
-    --classes 2
-```
-
-`--calib-path` için **kendi veri setinizden** 100-500 görüntü verin. COCO
-görüntüleriyle kalibre edilirse nicemleme (quantization) bizim brandalarımızın
-renk dağılımına göre ayarlanmaz ve doğruluk düşer.
-
-`--classes 2` şart: modelimiz 2 sınıflı (0 = kirmizi_hedef, 1 = mavi_hedef).
-
----
-
 ## Üç sessiz tuzak
 
 Üçü de **hata vermez**. Sadece yanlış sonuç üretir.
 
-### 1. Etiketler — bu bizi sıfırlayabilir
+### 1. Etiketler — ÇÖZÜLDÜ
 
 `--labels-json` verilmezse Hailo **COCO'nun 80 sınıfını** kullanır ve model
 `person` / `bicycle` döndürür. Bu projede ONNX ile bir kez yaşandı.
 
-Bu depoda dosya hazır — `models/safak_etiketler.json`:
+Dosya hazır ve sırası **derleme çıktısıyla doğrulandı** (yukarıya bakınız):
+`["kirmizi_hedef", "mavi_hedef"]`, başta dolgu yok.
 
-```json
-{
-  "detection_threshold": 0.35,
-  "max_boxes": 20,
-  "labels": ["unlabeled", "kirmizi_hedef", "mavi_hedef"]
-}
-```
-
-⚠️ Listedeki `"unlabeled"` dolgusu **kumar**: bazı sürümlerde gerekli,
-bazılarında fazla. Yanlışsa sınıflar bir kayar → **kırmızı ile mavi yer
-değişir** → her iki hedefte yanlış yük → 40 puan.
-
-**Savunmamız:** `detect_hailo.py` etiketi **dizeyle** eşliyor, indeksle değil.
-- `"unlabeled"` gelirse → tanınmıyor, log'a basılıyor, **eleniyor**
-- Kırmızı kutuya `"mavi_hedef"` etiketi gelirse → `color_verify` o kutuda mavi
-  oranını ~0 buluyor, eşikte **eleniyor**
-
+**Yine de savunma katmanı duruyor:** `detect_hailo.py` etiketi *dizeyle*
+eşliyor, indeksle değil. Beklenmedik bir etiket gelirse log'a basılıp eleniyor;
+sınıf kayması olsa bile `color_verify` yakalıyor (kırmızı kutuda mavi oranı ≈ 0).
 Yani hata "yanlış yük atma" değil, "hiç tespit alamama" biçiminde çıkar.
-Fail-safe, fail-dangerous değil.
 
 ### 2. Renk düzeni
 
