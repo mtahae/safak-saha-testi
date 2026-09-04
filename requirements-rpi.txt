@@ -1,0 +1,13 @@
+# ŞAFAK UAV - Saha testi, Raspberry Pi 5 bağımlılıkları
+#
+# ÖNCE apt'ten (venv --system-site-packages ile bunları görür):
+#   sudo apt install -y python3-picamera2 python3-opencv python3-venv git
+#
+# Sonra venv içinde:
+ncnn>=1.0            # RPi5 CPU çıkarımı (ARM-NEON) — uçuş yolu bu
+pymavlink>=2.4.49    # Pixhawk / ArduPilot haberleşmesi
+numpy>=1.24
+flask>=3.0           # saha testi izleme arayüzü (--ui)
+#
+# torch / ultralytics GEREKMEZ — Pi'de model NCNN olarak çalışır.
+# Hailo yolu için ayrıca: sudo apt install hailo-all
